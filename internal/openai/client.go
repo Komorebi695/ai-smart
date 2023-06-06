@@ -146,7 +146,7 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 
 	log.Printf("request json string : %v", string(b))
 
-	apiKey := "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"
+	apiKey := ""
 	req, err := http.NewRequest(method, reqUrl, bytes.NewBuffer(b))
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
