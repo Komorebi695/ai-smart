@@ -1,5 +1,12 @@
 package config
 
+import (
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"log"
+	"time"
+)
+
 type MysqlInit struct {
 	Master Mysql `json:"master"`
 }
@@ -23,24 +30,24 @@ func (m *Mysql) Dsn() string {
 }
 
 // initMysqlByConfig 初始化Mysql数据库用过传入配置
-//func initMysqlByConfig(m Mysql, gormConf gorm.Config) *gorm.DB {
-//	if m.Dbname == "" {
-//		return nil
-//	}
-//	mysqlConfig := mysql.Config{
-//		DSN:                       m.Dsn(), // DSN data source name
-//		DefaultStringSize:         191,     // string 类型字段的默认长度
-//		SkipInitializeWithVersion: false,   // 根据版本自动配置
-//	}
-//
-//	if db, err := gorm.Open(mysql.New(mysqlConfig), &gormConf); err != nil {
-//		logx.Errorf("gorm.Open err - config:%+v,gomConf:%+v", m, gormConf)
-//		return nil
-//	} else {
-//		sqlDB, _ := db.DB()
-//		sqlDB.SetMaxIdleConns(m.MaxIdleConns)
-//		sqlDB.SetMaxOpenConns(m.MaxOpenConns)
-//		sqlDB.SetConnMaxIdleTime(time.Minute)
-//		return db
-//	}
-//}
+func initMysqlByConfig(m Mysql, gormConf gorm.Config) *gorm.DB {
+	if m.Dbname == "" {
+		return nil
+	}
+	mysqlConfig := mysql.Config{
+		DSN:                       m.Dsn(), // DSN data source name
+		DefaultStringSize:         191,     // string 类型字段的默认长度
+		SkipInitializeWithVersion: false,   // 根据版本自动配置
+	}
+
+	if db, err := gorm.Open(mysql.New(mysqlConfig), &gormConf); err != nil {
+		log.Fatalf("gorm.Open err - config:%+v,gomConf:%+v", m, gormConf)
+		return nil
+	} else {
+		sqlDB, _ := db.DB()
+		sqlDB.SetMaxIdleConns(m.MaxIdleConns)
+		sqlDB.SetMaxOpenConns(m.MaxOpenConns)
+		sqlDB.SetConnMaxIdleTime(time.Minute)
+		return db
+	}
+}

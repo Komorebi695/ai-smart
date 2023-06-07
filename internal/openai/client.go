@@ -146,7 +146,8 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 
 	log.Printf("request json string : %v", string(b))
 
-	apiKey := ""
+	//apiKey := "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"
+	apiKey := "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"
 	req, err := http.NewRequest(method, reqUrl, bytes.NewBuffer(b))
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
@@ -172,12 +173,12 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 }
 
 // Completions 为提供的提示和参数创建补全。
-func Completions(model, msg string) (string, error) {
+func Completions(model, msg string, temperature float32) (string, error) {
 	req := CompletionsReq{
 		Model:       model,
 		Prompt:      msg,
 		MaxTokens:   2048,
-		Temperature: Temperature,
+		Temperature: temperature,
 	}
 	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, CompletionsApi), ContentTypeJson, req)
 	if err != nil {
@@ -198,7 +199,7 @@ func Completions(model, msg string) (string, error) {
 }
 
 // Chat 给定描述对话的消息列表，模型将返回响应。
-func Chat(model string, msg []string) (string, error) {
+func Chat(model string, msg []string, temperature float32) (string, error) {
 	var msgList []ChatMessage
 	for _, v := range msg {
 		tmp := ChatMessage{
@@ -210,7 +211,7 @@ func Chat(model string, msg []string) (string, error) {
 	req := ChatReq{
 		Model:       model,
 		Messages:    msgList,
-		Temperature: Temperature,
+		Temperature: temperature,
 	}
 	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ChatApi), ContentTypeJson, req)
 	if err != nil {
@@ -229,12 +230,12 @@ func Chat(model string, msg []string) (string, error) {
 }
 
 // Edits 给定提示和指令，模型将返回提示的编辑版本。
-func Edits(model, input, instruction string) (string, error) {
+func Edits(model, input, instruction string, temperature float32) (string, error) {
 	req := EditsReq{
 		Model:       model,
 		Input:       input,
 		Instruction: instruction,
-		Temperature: Temperature,
+		Temperature: temperature,
 	}
 	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, EditApi), ContentTypeJson, req)
 	if err != nil {
