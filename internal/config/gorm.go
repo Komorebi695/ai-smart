@@ -9,6 +9,7 @@ import (
 
 type MysqlInit struct {
 	Master Mysql `json:"master"`
+	Slaver Mysql `json:"slaver"`
 }
 
 type Mysql struct {
@@ -27,6 +28,10 @@ type Mysql struct {
 
 func (m *Mysql) Dsn() string {
 	return m.Username + ":" + m.Password + "@tcp(" + m.Path + ":" + m.Port + ")/" + m.Dbname + "?" + m.Config
+}
+
+func InitDB(env, serviceName string, dbList []string) {
+
 }
 
 // initMysqlByConfig 初始化Mysql数据库用过传入配置
@@ -51,3 +56,16 @@ func initMysqlByConfig(m Mysql, gormConf gorm.Config) *gorm.DB {
 		return db
 	}
 }
+
+//func getMysqlConfig(env, serviceName, dbName, mode string, testMode bool, gormConf gorm.Config) (Mysql, gorm.Config) {
+//	var confPath string
+//	if testMode {
+//		// 单元测试初始化模块，位于internal/test/base_test.go
+//		confPath = fmt.Sprintf("../../conf/%s/mysql/%s.yaml", env, dbName)
+//	} else {
+//		// 项目初始化模块，位于根目录xxx.go
+//		confPath = fmt.Sprintf(".conf/%s/mysql/%s.yaml", env, dbName)
+//	}
+//	var a MysqlInit
+//
+//}
