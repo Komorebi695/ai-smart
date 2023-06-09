@@ -1,9 +1,15 @@
 package config
 
 import (
+	"context"
+	"fmt"
+	"gopkg.in/yaml.v2"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"log"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -30,8 +36,38 @@ func (m *Mysql) Dsn() string {
 	return m.Username + ":" + m.Password + "@tcp(" + m.Path + ":" + m.Port + ")/" + m.Dbname + "?" + m.Config
 }
 
-func InitDB(env, serviceName string, dbList []string) {
+func IsGormFound(err error) error {
+	if err == gorm.ErrRecordNotFound {
+		return nil
+	}
+	return err
+}
 
+func InitDB(env, serviceName string, dbList []string, testMode bool, gomConf gorm.Config) {
+	passEnv := map[string]bool{
+		"dev":  true,
+		"prod": true,
+		"test": true,
+	}
+	if _, ok := passEnv[env]; ok {
+		log.Fatalf("InitDB env fail - serviceName:%s,dbList:%+V,gormConf:%+v", serviceName, dbList, gomConf)
+	}
+
+}
+
+func DbMapsInit(env, serviceName string, initLists []string, testMode bool, gomConf gorm.Config) map[string]map[string]*gorm.DB {
+	DbMaps := make(map[string]map[string]*gorm.DB)
+	for _, v := range initLists {
+		DbMaps[v] = map[string]*gorm.DB{
+			"master": gormInit(env, serviceName, v, "master", testMode, gomConf),
+			"slaver": gormInit(env, serviceName, v, "slaver", testMode, gomConf),
+		}
+	}
+	return DbMaps
+}
+
+func gormInit(env, serviceName, dbName, mode string, test bool, gormConf gorm.Config) *gorm.DB {
+	return initMysqlByConfig(getMysqlConfig(env, serviceName, dbName, mode, test, gormConf))
 }
 
 // initMysqlByConfig 初始化Mysql数据库用过传入配置
@@ -57,15 +93,95 @@ func initMysqlByConfig(m Mysql, gormConf gorm.Config) *gorm.DB {
 	}
 }
 
-//func getMysqlConfig(env, serviceName, dbName, mode string, testMode bool, gormConf gorm.Config) (Mysql, gorm.Config) {
-//	var confPath string
-//	if testMode {
-//		// 单元测试初始化模块，位于internal/test/base_test.go
-//		confPath = fmt.Sprintf("../../conf/%s/mysql/%s.yaml", env, dbName)
-//	} else {
-//		// 项目初始化模块，位于根目录xxx.go
-//		confPath = fmt.Sprintf(".conf/%s/mysql/%s.yaml", env, dbName)
-//	}
-//	var a MysqlInit
-//
-//}
+func getMysqlConfig(env, serviceName, dbName, mode string, testMode bool, gormConf gorm.Config) (Mysql, gorm.Config) {
+	var confPath string
+	if testMode {
+		// 单元测试初始化模块，位于internal/test/base_test.go
+		confPath = fmt.Sprintf("../../conf/%s/mysql/%s.yaml", env, dbName)
+	} else {
+		// 项目初始化模块，位于根目录xxx.go
+		confPath = fmt.Sprintf(".conf/%s/mysql/%s.yaml", env, dbName)
+	}
+	var a MysqlInit
+	file, err := os.Open(confPath)
+	if err != nil {
+		return Mysql{}, gorm.Config{}
+	}
+	if err := yaml.NewDecoder(file).Decode(&a); err != nil {
+		return Mysql{}, gorm.Config{}
+	}
+
+	gormConf.Logger = DBLog{
+		env:         env,
+		serviceName: serviceName,
+	}
+
+	LogModeMap := map[string]logger.LogLevel{
+		"dev":  3,
+		"test": 2,
+		"prod": 1,
+	}
+	gormConf.Logger = gormConf.Logger.LogMode(LogModeMap[env])
+	if mode == "w" || mode == "write" || mode == "master" {
+		return a.Master, gormConf
+	} else {
+		return a.Slaver, gormConf
+	}
+}
+
+type DBLog struct {
+	env         string
+	serviceName string
+	logLevel    logger.LogLevel
+}
+
+func (dBLog DBLog) Info(c context.Context, s string, i ...interface{}) {
+	if dBLog.logLevel > 2 {
+		log.Printf("sql:s:%+v,i:%+v", s, i)
+	}
+}
+
+func (dBLog DBLog) Warn(c context.Context, s string, i ...interface{}) {
+	if dBLog.logLevel > 2 {
+		log.Printf("sql:Warn:s:%+v,i:%+v", s, i)
+	}
+}
+
+func (dBLog DBLog) Error(c context.Context, s string, i ...interface{}) {
+	if dBLog.logLevel > 2 {
+		log.Printf("sql:Error:s:%+v,i:%+v", s, i)
+	}
+}
+
+func (dBLog DBLog) Trace(c context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
+	if err == nil {
+		if dBLog.logLevel > 1 {
+			sql, rowsAffected := fc()
+			log.Printf("sql:%s", fmt.Sprintf("%+v,rowsAffected:%+v", sql, rowsAffected))
+		}
+	} else {
+		log.Printf("sql:err:%s", err.Error())
+	}
+}
+
+func (dBLog DBLog) LogMode(logLevel logger.LogLevel) logger.Interface {
+	return DBLog{
+		env:         dBLog.env,
+		serviceName: dBLog.serviceName,
+		logLevel:    logLevel,
+	}
+}
+
+//DB 拿出DB
+func DB(dbName string, mode ...string) *gorm.DB {
+	if len(mode) > 0 {
+		dbChange := strings.ToLower(mode[0])
+		if dbChange == "w" || dbChange == "write" || dbChange == "master" {
+			return DbMaps[dbName]["master"]
+		} else {
+			return DbMaps[dbName]["slaver"]
+		}
+	} else {
+		return DbMaps[dbName]["slaver"]
+	}
+}
