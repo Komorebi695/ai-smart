@@ -12,7 +12,7 @@ func TestCompletions(t *testing.T) {
 	msg := "给我介绍一下各个星座。"
 	completions, err := Completions(ModelName, msg, 0.7)
 	if err != nil {
-		log.Fatalf("Error: %s", err)
+		log.Fatalf("%s", err)
 		return
 	}
 	fmt.Printf("响应：%s\n", completions)
@@ -41,7 +41,7 @@ func TestEdits(t *testing.T) {
 }
 
 func TestImages(t *testing.T) {
-	msg := "一只可爱的猫，但是这只猫的耳朵特别大。"
+	msg := "一个芭蕾舞者在黄昏时在港口跳舞。"
 	reply, err := ImagesGenerations(msg, "1024x1024", 2)
 	if err != nil {
 		log.Fatalf("error: %s", err)
