@@ -3,6 +3,7 @@ package openai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -44,6 +45,7 @@ type CompletionsRsp struct {
 	Model   string              `json:"model"`
 	Choices []CompletionsChoice `json:"choices"`
 	Usage   Usage               `json:"usage"`
+	Error   Error               `json:"error"`
 }
 
 type CompletionsChoice struct {
@@ -76,6 +78,7 @@ type ChatRsp struct {
 	Created int          `json:"created"`
 	Choices []ChatChoice `json:"choices"`
 	Usage   Usage        `json:"usage"`
+	Error   Error        `json:"error"`
 }
 
 type ChatChoice struct {
@@ -98,6 +101,7 @@ type EditsRsp struct {
 	Created int                      `json:"created"`
 	Choices []map[string]interface{} `json:"choices"`
 	Usage   Usage                    `json:"usage"`
+	Error   Error                    `json:"error"`
 }
 
 type ImagesGenReq struct {
@@ -109,6 +113,7 @@ type ImagesGenReq struct {
 type ImagesGenRsp struct {
 	Created int   `json:"created"`
 	Data    []Url `json:"data"`
+	Error   Error `json:"error"`
 }
 
 type Url struct {
@@ -134,7 +139,15 @@ type AudioReq struct {
 }
 
 type AudioRsp struct {
-	Text string `json:"text"`
+	Text  string `json:"text"`
+	Error Error  `json:"error"`
+}
+
+type Error struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Param   string `json:"param"`
+	Code    string `json:"code"`
 }
 
 // HttpMethodSend 发送http请求
@@ -143,18 +156,19 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("request json string :\nurl:%v\n%v", reqUrl, string(b))
 
-	log.Printf("request json string : %v", string(b))
-
-	//apiKey := "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"
-	apiKey := "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"
+	apiKey := ""
 	req, err := http.NewRequest(method, reqUrl, bytes.NewBuffer(b))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
 	proxyURL, err := url.Parse("http://127.0.0.1:7890")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
 
@@ -164,6 +178,7 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 		return nil, err
 	}
 	defer response.Body.Close()
+	log.Printf("response status:%v", response.Status)
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -184,15 +199,16 @@ func Completions(model, msg string, temperature float32) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	var completionsData CompletionsRsp
-	if err := json.Unmarshal(body, &completionsData); err != nil {
+	var data CompletionsRsp
+	if err = json.Unmarshal(body, &data); err != nil {
 		return "", err
 	}
-
+	if len(data.Error.Type) > 0 {
+		return "", errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
+	}
 	var reply string
-	if len(completionsData.Choices) > 0 {
-		reply = completionsData.Choices[0].Text
+	if len(data.Choices) > 0 {
+		reply = data.Choices[0].Text
 	}
 
 	return strings.ReplaceAll(reply, "\n", ""), nil
@@ -217,13 +233,16 @@ func Chat(model string, msg []string, temperature float32) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var chatData ChatRsp
-	if err := json.Unmarshal(body, &chatData); err != nil {
+	var data ChatRsp
+	if err = json.Unmarshal(body, &data); err != nil {
 		return "", err
 	}
+	if len(data.Error.Type) > 0 {
+		return "", errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
+	}
 	var reply string
-	if len(chatData.Choices) > 0 {
-		reply = strings.ReplaceAll(chatData.Choices[0].Message.Content, "\n", "")
+	if len(data.Choices) > 0 {
+		reply = strings.ReplaceAll(data.Choices[0].Message.Content, "\n", "")
 	}
 
 	return reply, nil
@@ -242,14 +261,16 @@ func Edits(model, input, instruction string, temperature float32) (string, error
 		return "", err
 	}
 
-	var editsData EditsRsp
-	if err := json.Unmarshal(body, &editsData); err != nil {
+	var data EditsRsp
+	if err = json.Unmarshal(body, &data); err != nil {
 		return "", err
 	}
-
+	if len(data.Error.Type) > 0 {
+		return "", errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
+	}
 	var reply string
-	if len(editsData.Choices) > 0 {
-		for _, v := range editsData.Choices {
+	if len(data.Choices) > 0 {
+		for _, v := range data.Choices {
 			reply = v["text"].(string)
 			break
 		}
@@ -273,8 +294,10 @@ func ImagesGenerations(prompt, size string, n int) ([]Url, error) {
 	if err = json.Unmarshal(body, &data); err != nil {
 		return nil, err
 	}
+	if len(data.Error.Type) > 0 {
+		return data.Data, errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
+	}
 
-	fmt.Println(data.Created)
 	return data.Data, nil
 }
 
@@ -294,8 +317,10 @@ func ImagesEdits(image *os.File, prompt, size string, n int) ([]Url, error) {
 	if err = json.Unmarshal(body, &data); err != nil {
 		return nil, err
 	}
+	if len(data.Error.Type) > 0 {
+		return data.Data, errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
+	}
 
-	fmt.Println(data.Created)
 	return data.Data, nil
 }
 
@@ -313,6 +338,9 @@ func ImagesVariations(image *os.File, n int, size string) ([]Url, error) {
 	var data ImagesGenRsp
 	if err = json.Unmarshal(body, &data); err != nil {
 		return nil, err
+	}
+	if len(data.Error.Type) > 0 {
+		return data.Data, errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
 	}
 
 	return data.Data, nil
@@ -338,10 +366,13 @@ func audio(model string, file *os.File, audioType string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var reply AudioRsp
-	if err := json.Unmarshal(body, &reply); err != nil {
+	var data AudioRsp
+	if err = json.Unmarshal(body, &data); err != nil {
 		return "", err
 	}
+	if len(data.Error.Type) > 0 {
+		return "", errors.New(fmt.Sprintf("send request error! type:%v. message:%v", data.Error.Type, data.Error.Message))
+	}
 
-	return reply.Text, nil
+	return data.Text, nil
 }
