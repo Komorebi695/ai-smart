@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -150,8 +152,8 @@ type Error struct {
 	Code    string `json:"code"`
 }
 
-// HttpMethodSend 发送http请求
-func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]byte, error) {
+// HttpJsonSend 发送http请求
+func HttpJsonSend(method, reqUrl string, param interface{}) ([]byte, error) {
 	b, err := json.Marshal(param)
 	if err != nil {
 		return nil, err
@@ -163,7 +165,7 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
 	proxyURL, err := url.Parse("http://127.0.0.1:7890")
@@ -187,6 +189,66 @@ func HttpMethodSend(method, reqUrl, contentType string, param interface{}) ([]by
 	return body, nil
 }
 
+func HttpMultiPartSend(method, reqUrl string, param interface{}) ([]byte, error) {
+	file, err := os.Open("filePath")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// 添加文件字段
+	filePart, err := writer.CreateFormFile("file", "filePath")
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(filePart, file)
+	if err != nil {
+		return nil, err
+	}
+
+	// 添加文本字段
+	textPart, err := writer.CreateFormField("text")
+	if err != nil {
+		return nil, err
+	}
+	_, err = textPart.Write([]byte(""))
+	if err != nil {
+		return nil, err
+	}
+
+	// 写入结束边界
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
+	// 创建HTTP请求
+	req, err := http.NewRequest("POST", "url", body)
+	if err != nil {
+		return nil, err
+	}
+
+	// 设置请求头
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// 发送HTTP请求
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("上传请求失败，状态码：%d", resp.StatusCode)
+	}
+
+	return nil, nil
+}
+
 // Completions 为提供的提示和参数创建补全。
 func Completions(model, msg string, temperature float32) (string, error) {
 	req := CompletionsReq{
@@ -195,7 +257,7 @@ func Completions(model, msg string, temperature float32) (string, error) {
 		MaxTokens:   2048,
 		Temperature: temperature,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, CompletionsApi), ContentTypeJson, req)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, CompletionsApi), req)
 	if err != nil {
 		return "", err
 	}
@@ -229,7 +291,7 @@ func Chat(model string, msg []string, temperature float32) (string, error) {
 		Messages:    msgList,
 		Temperature: temperature,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ChatApi), ContentTypeJson, req)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ChatApi), req)
 	if err != nil {
 		return "", err
 	}
@@ -256,7 +318,7 @@ func Edits(model, input, instruction string, temperature float32) (string, error
 		Instruction: instruction,
 		Temperature: temperature,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, EditApi), ContentTypeJson, req)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, EditApi), req)
 	if err != nil {
 		return "", err
 	}
@@ -286,7 +348,7 @@ func ImagesGenerations(prompt, size string, n int) ([]Url, error) {
 		N:      n,
 		Size:   size,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ImagesGenerationsApi), ContentTypeJson, req)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ImagesGenerationsApi), req)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +371,7 @@ func ImagesEdits(image *os.File, prompt, size string, n int) ([]Url, error) {
 		N:      n,
 		Size:   size,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ImagesEditsApi), ContentTypeMultipart, req)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ImagesEditsApi), req)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +393,7 @@ func ImagesVariations(image *os.File, n int, size string) ([]Url, error) {
 		N:     n,
 		Size:  size,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ImagesVariationsApi), ContentTypeJson, req)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, ImagesVariationsApi), req)
 	if err != nil {
 		return nil, err
 	}
@@ -358,11 +420,11 @@ func AudioTranslations(model string, file *os.File) (string, error) {
 
 // Audio 将音频转换为文本。 格式之一：mp3、mp4、mpeg、mpga、m4a、wav 或 webm
 func audio(model string, file *os.File, audioType string) (string, error) {
-	audio := AudioReq{
+	audios := AudioReq{
 		Model: model,
 		File:  file,
 	}
-	body, err := HttpMethodSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, audioType), ContentTypeMultipart, audio)
+	body, err := HttpJsonSend(http.MethodPost, fmt.Sprintf("%s%s", BASEURL, audioType), audios)
 	if err != nil {
 		return "", err
 	}
