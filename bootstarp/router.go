@@ -1,4 +1,4 @@
-package controller
+package bootstarp
 
 import (
 	"github.com/gin-gonic/gin"

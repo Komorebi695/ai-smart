@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"ai-smart/internal/model"
+	model2 "ai-smart/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +12,7 @@ func NewOpenAIController() *OpenAIController {
 	return &OpenAIController{}
 }
 
-func (h *OpenAIController) Completions(c *gin.Context, req *model.BaseHeaderReq) (rsp *model.BaseResponse) {
+func (h *OpenAIController) Completions(c *gin.Context, req *model2.BaseHeaderReq) (rsp *model2.BaseResponse) {
 
 	return nil
 }

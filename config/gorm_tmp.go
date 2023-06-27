@@ -1,6 +1,7 @@
 package config
 
 import (
+	"ai-smart/initialize"
 	"context"
 	"fmt"
 	"gopkg.in/yaml.v2"
@@ -33,7 +34,7 @@ type Mysql struct {
 }
 
 func (m *Mysql) Dsn() string {
-	return m.Username + ":" + m.Password + "@tcp(" + m.Path + ":" + m.Port + ")/" + m.Dbname + "?" + m.Config
+	return fmt.Sprintf("%v:%v@tcp(%v:%d)/%v?%v", m.Username, m.Password, m.Path, m.Port, m.Dbname, m.Config)
 }
 
 func IsGormFound(err error) error {
@@ -52,7 +53,7 @@ func InitDB(env, serviceName string, dbList []string, testMode bool, gomConf gor
 	if _, ok := passEnv[env]; ok {
 		log.Fatalf("InitDB env fail - serviceName:%s,dbList:%+V,gormConf:%+v", serviceName, dbList, gomConf)
 	}
-
+	DbMapsInit(env, serviceName, dbList, testMode, gomConf)
 }
 
 func DbMapsInit(env, serviceName string, initLists []string, testMode bool, gomConf gorm.Config) map[string]map[string]*gorm.DB {
@@ -102,6 +103,7 @@ func getMysqlConfig(env, serviceName, dbName, mode string, testMode bool, gormCo
 		// 项目初始化模块，位于根目录xxx.go
 		confPath = fmt.Sprintf(".conf/%s/mysql/%s.yaml", env, dbName)
 	}
+	confPath = "./config.yaml"
 	var a MysqlInit
 	file, err := os.Open(confPath)
 	if err != nil {
@@ -172,16 +174,16 @@ func (dBLog DBLog) LogMode(logLevel logger.LogLevel) logger.Interface {
 	}
 }
 
-//DB 拿出DB
+// DB 拿出DB
 func DB(dbName string, mode ...string) *gorm.DB {
 	if len(mode) > 0 {
 		dbChange := strings.ToLower(mode[0])
 		if dbChange == "w" || dbChange == "write" || dbChange == "master" {
-			return DbMaps[dbName]["master"]
+			return initialize.DbMaps[dbName]["master"]
 		} else {
-			return DbMaps[dbName]["slaver"]
+			return initialize.DbMaps[dbName]["slaver"]
 		}
 	} else {
-		return DbMaps[dbName]["slaver"]
+		return initialize.DbMaps[dbName]["slaver"]
 	}
 }

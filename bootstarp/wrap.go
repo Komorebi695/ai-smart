@@ -1,7 +1,7 @@
-package controller
+package bootstarp
 
 import (
-	"ai-smart/internal/model"
+	model2 "ai-smart/model"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -38,7 +38,7 @@ func GinHandelWrap2(obj interface{}) gin.HandlerFunc {
 	}
 
 	// 获取 *model.BaseResponseInterface 的类型
-	tp1 := reflect.TypeOf((*model.BaseResponseInterface)(nil)).Elem()
+	tp1 := reflect.TypeOf((*model2.BaseResponseInterface)(nil)).Elem()
 	// 检查返回的参数是否实现了，model.BaseResponseInterface接口
 	if !typ.Out(0).Implements(tp1) {
 		panic("func out param not base response.")
@@ -59,7 +59,7 @@ func GinHandelWrap2(obj interface{}) gin.HandlerFunc {
 			}
 			// 鉴定参数
 			if err := validator.New().Struct(tmp); err != nil {
-				c.AbortWithStatusJSON(http.StatusOK, model.ParamErrRsp)
+				c.AbortWithStatusJSON(http.StatusOK, model2.ParamErrRsp)
 				return
 			}
 			log.Printf("get req:%+v,type:%T", tmp, tmp)
@@ -73,7 +73,7 @@ func GinHandelWrap2(obj interface{}) gin.HandlerFunc {
 		cost := time.Since(begin)
 
 		log.Printf("uri:%v request:%v response:%v cost:%v", c.Request.RequestURI, req, ans, cost)
-		if v, ok := ans.(model.BaseResponseInterface); ok {
+		if v, ok := ans.(model2.BaseResponseInterface); ok {
 			if v.GetErr() != nil {
 				log.Fatalf("when deal uri:%v,req:%v,appear err:%+v", c.Request.RequestURI, req, v.GetErr())
 			}

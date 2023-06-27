@@ -9,7 +9,7 @@ import (
 
 func TestCompletions(t *testing.T) {
 	// go test -v openai.go client_test.go
-	msg := "给我介绍一下各个星座。"
+	msg := "红色的晚霞映满了天空的云，还有一朵爱心形状的红色的云。在湖边有一对情侣依偎欣赏着漫天的晚霞。请帮我重新描述这句话要求跟生动和完善。"
 	completions, err := Completions(ModelName, msg, 0.7)
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -32,7 +32,7 @@ func TestChat(t *testing.T) {
 func TestEdits(t *testing.T) {
 	input := "What day of the wek is it?"
 	instruction := "Fix the spelling mistakes"
-	reply, err := Edits("text-davinci-edit-001", input, instruction, 0.7)
+	reply, err := Edits("text-davinci-edit-001", input, instruction, 0.2)
 	if err != nil {
 		log.Fatalf("error: %s", err)
 		return
@@ -41,8 +41,8 @@ func TestEdits(t *testing.T) {
 }
 
 func TestImages(t *testing.T) {
-	msg := "总是梦见云层之上飞过子午线\n分不清是黑夜还是白天\n带着装不下的期待匆匆地赶来\n我再想一遍\n想一遍\n我们寻找着在这条路的中间\n我们迷失着在这条路的两端\n每当黄昏阳光把所有都渲染\n你看那金黄多耀眼\n我们奔跑着在这条路的中间\n我们哭泣着在这条路的两端\n每当黄昏阳光把所有都渲染\n我看到夜的黑暗\n晚风吹过金色沙滩海边的晚宴\n那种味道现在还不习惯\n拉斯维加斯往返路上我看见\n这里无人烟\n无人烟\n我们寻找着在这条路的中间\n我们迷失着在这条路的两端\n每当黄昏阳光把所有都渲染\n你看那金黄多耀眼\n我们奔跑着在这条路的中间\n我们哭泣着在这条路的两端\n每当黄昏阳光把所有都渲染\n我看到夜的黑暗\n奔跑着在这条路的中间\n哭泣着在这条路的两端\n每当黄昏阳光把所有都渲染\n我看到夜的黑暗"
-	reply, err := ImagesGenerations(msg, "1024x1024", 2)
+	msg := "紫色晚霞"
+	reply, err := ImagesGenerations(msg, "1024x1024", 3)
 	if err != nil {
 		log.Fatalf("error: %s", err)
 		return
