@@ -2,12 +2,7 @@ package initialize
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"strings"
-)
-
-var (
-	DbMaps map[string]map[string]*gorm.DB
 )
 
 func Load(env string, service string) string {
