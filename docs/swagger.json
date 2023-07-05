@@ -1,0 +1,65 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "test api",
+        "title": "开发文档",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "paths": {
+        "/v1/chat/completions": {
+            "post": {
+                "description": "Completions",
+                "tags": [
+                    "FleetDriver"
+                ],
+                "summary": "Completions",
+                "parameters": [
+                    {
+                        "description": "参数data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BaseHeaderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.BaseResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.BaseHeaderReq": {
+            "type": "object"
+        },
+        "model.BaseResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "format": "int"
+                },
+                "err": {},
+                "log_id": {
+                    "type": "string"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

@@ -11,11 +11,17 @@ import (
 	"net/http"
 )
 
+// @title 开发文档
+// @version 1.0
+// @description  test api
+// @BasePath
+// @host localhost:8080
+// @schemes http https
 func main() {
 	// 初始化配置
 	initialize.InitConfig()
-	global.App.Log = initialize.InitLog()
-	global.App.Log.Info("zap log init success!")
+	global.Log = initialize.InitLog()
+	global.Log.Info("zap log init success!")
 	//config.InitDB("env", "local", []string{"main"}, false, gorm.Config{})
 
 	s := gin.Default()
@@ -23,7 +29,7 @@ func main() {
 	bootstarp.RegisterPath(s)
 
 	// 监听
-	if err := endless.ListenAndServe(fmt.Sprintf(":%v", global.App.Config.App.Port), s); err != nil {
+	if err := endless.ListenAndServe(fmt.Sprintf(":%v", global.Config.App.Port), s); err != nil {
 		log.Fatalf("listen err:%v", err)
 	}
 }

@@ -26,12 +26,12 @@ func InitConfig() *viper.Viper {
 	v.WatchConfig()
 	v.OnConfigChange(func(in fsnotify.Event) {
 		fmt.Println("config file change:", in.Name)
-		if err := v.Unmarshal(&global.App.Config); err != nil {
+		if err := v.Unmarshal(&global.Config); err != nil {
 			fmt.Println(err)
 		}
 	})
 
-	if err := v.Unmarshal(&global.App.Config); err != nil {
+	if err := v.Unmarshal(&global.Config); err != nil {
 		fmt.Println(err)
 	}
 

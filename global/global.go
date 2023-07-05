@@ -7,14 +7,20 @@ import (
 	"gorm.io/gorm"
 )
 
-var App = new(Application)
+//var App = new(Application)
 
 var (
 	DbMaps map[string]map[string]*gorm.DB
 )
 
-type Application struct {
+//type Application struct {
+//	Viper  *viper.Viper
+//	Config config.Configuration
+//	Log    *zap.Logger
+//}
+
+var (
 	Viper  *viper.Viper
 	Config config.Configuration
 	Log    *zap.Logger
-}
+)

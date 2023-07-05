@@ -1,0 +1,43 @@
+definitions:
+  model.BaseHeaderReq:
+    type: object
+  model.BaseResponse:
+    properties:
+      code:
+        format: int
+        type: integer
+      err: {}
+      log_id:
+        type: string
+      msg:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: test api
+  title: 开发文档
+  version: "1.0"
+paths:
+  /v1/chat/completions:
+    post:
+      description: Completions
+      parameters:
+      - description: 参数data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/model.BaseHeaderReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.BaseResponse'
+      summary: Completions
+      tags:
+      - FleetDriver
+schemes:
+- http
+- https
+swagger: "2.0"
